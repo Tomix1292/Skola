@@ -1,0 +1,2 @@
+# Skola
+Portal skoly
