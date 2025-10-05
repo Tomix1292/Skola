@@ -1,0 +1,884 @@
+<!doctype html>
+<html lang="cs">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Školní kvíz — lokální verze</title>
+<style>
+  :root{
+    --primary:#0b66a3;
+    --accent:#1583d6;
+    --bg:#f0f8ff;
+    --card:#ffffff;
+    --text:#04242f;
+    --muted:#5b7780;
+    --radius:12px;
+  }
+  body{margin:0;font-family:Inter,Segoe UI,Arial,sans-serif;background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased}
+  body.dark{--bg:#07121a;--card:#071a22;--text:#dff6ff;--muted:#9fb9c7}
+  header{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;background:linear-gradient(90deg,var(--primary),var(--accent));color:#fff}
+  .brand{display:flex;align-items:center;gap:12px}
+  .logo{width:52px;height:52px;border-radius:10px;background:rgba(255,255,255,0.08);display:flex;align-items:center;justify-content:center}
+  h1{margin:0;font-size:20px}
+  main{max-width:1100px;margin:20px auto;padding:0 16px}
+  .card{background:var(--card);border-radius:var(--radius);padding:16px;margin-bottom:16px;box-shadow:0 10px 30px rgba(6,42,58,0.06)}
+  .center{text-align:center}
+  button{background:var(--primary);color:#fff;border:0;padding:10px 14px;border-radius:10px;cursor:pointer;font-weight:600}
+  .btn-ghost{background:transparent;border:1px solid rgba(0,0,0,0.06);color:var(--text)}
+  input,select,textarea{padding:10px;border-radius:8px;border:1px solid #e6f3fa;margin-top:8px;width:100%;font-size:15px;background:transparent;color:inherit}
+  .two{display:flex;gap:10px}
+  .two > *{flex:1}
+  .small{font-size:13px;color:var(--muted)}
+  .hidden{display:none}
+  .listItem{padding:10px;border-radius:10px;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0));border:1px solid rgba(0,0,0,0.04);margin-bottom:10px}
+  .top-actions{display:flex;gap:8px;align-items:center}
+  .role-buttons{display:flex;gap:20px;justify-content:center;padding:24px}
+  .role-buttons button{width:180px;padding:14px;font-size:16px}
+  .container-padding{padding:14px}
+  .menu-dot{font-size:22px;cursor:pointer;padding:8px;border-radius:8px}
+  .menu-modal{position:fixed;right:18px;top:72px;width:320px;background:var(--card);border-radius:12px;padding:12px;box-shadow:0 12px 40px rgba(0,0,0,0.14);z-index:999}
+  .menu-modal .menuItem{padding:10px;border-radius:8px;cursor:pointer;font-weight:700;margin-bottom:6px}
+  .question-block{border:1px solid #e6eef6;padding:12px;border-radius:10px;background:var(--card);margin-bottom:8px}
+  @media (max-width:720px){ .two{flex-direction:column} .role-buttons{flex-direction:column} .role-buttons button{width:100%} .menu-modal{right:12px;left:12px} }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <div class="logo" aria-hidden>
+      <!-- jednoduché SVG logo -->
+      <svg width="40" height="40" viewBox="0 0 140 140" xmlns="http://www.w3.org/2000/svg">
+        <defs><linearGradient id="g" x1="0" x2="1"><stop offset="0" stop-color="#0b66a3"/><stop offset="1" stop-color="#1583d6"/></linearGradient></defs>
+        <rect x="4" y="4" width="132" height="132" rx="18" fill="url(#g)"/>
+        <path d="M25 78 L70 40 L115 78 L115 102 L25 102 Z" fill="#fff" opacity="0.98"/>
+      </svg>
+    </div>
+    <div>
+      <h1>Školní Kvíz</h1>
+      <div id="deviceBadge" class="small">—</div>
+    </div>
+  </div>
+
+  <div style="display:flex;align-items:center;gap:10px">
+    <button id="themeToggle" title="přepnout téma" class="btn-ghost">🌙</button>
+    <div id="menuDot" class="menu-dot hidden">⋮</div>
+  </div>
+</header>
+
+<main>
+  <!-- ROLE SELECTION -->
+  <div id="roleSelect" class="card center">
+    <h2>Vyberte, kdo jste</h2>
+    <div class="role-buttons" style="padding-top:14px;padding-bottom:6px">
+      <button id="btnUcitel">Jsem učitel</button>
+      <button id="btnZak" style="background:#147b3a">Jsem žák</button>
+    </div>
+    <p class="small">Admin uživatel je přednastaven (admin@skola.cz / Admin12345). Učitele obvykle přidává admin.</p>
+  </div>
+
+  <!-- AUTH -->
+  <div id="authSection" class="card hidden">
+    <h3 id="authTitle"></h3>
+    <form id="authForm" onsubmit="return false;">
+      <div id="regFields" class="hidden container-padding">
+        <div class="two">
+          <input id="reg_name" placeholder="Jméno (registrace)"/>
+          <input id="reg_surname" placeholder="Příjmení (registrace)"/>
+        </div>
+        <div class="two">
+          <input id="reg_class" placeholder="Třída (např. 6.A)"/>
+          <input id="reg_password" placeholder="Heslo (registrace)" type="password"/>
+        </div>
+        <label class="small">Profilová fotka (nepovinné, pouze lokálně)</label>
+        <input id="reg_avatar" type="file" accept="image/png,image/jpeg" />
+      </div>
+
+      <div class="container-padding">
+        <input id="email" type="email" placeholder="Email" required />
+        <input id="password" type="password" placeholder="Heslo" required />
+        <div style="display:flex;align-items:center;gap:8px;margin-top:10px">
+          <button id="authSubmit">Přihlásit se</button>
+          <button id="toggleAuth" type="button" class="btn-ghost">Chci se zaregistrovat</button>
+          <button id="forgotBtn" type="button" class="btn-ghost" style="margin-left:auto">Zapomenuté heslo</button>
+        </div>
+        <div style="margin-top:12px"><button id="backToRole" type="button" class="btn-ghost">Zpět k výběru role</button></div>
+        <div id="authMsg" class="small" style="margin-top:8px"></div>
+      </div>
+    </form>
+  </div>
+
+  <!-- RESET (simulace odeslání emailu) -->
+  <div id="resetSection" class="card hidden">
+    <h3>Obnova hesla</h3>
+    <div class="container-padding">
+      <input id="reset_email" placeholder="Zadej svůj email" />
+      <div style="margin-top:8px;display:flex;gap:8px">
+        <button id="resetSend">Odeslat žádost</button>
+        <button id="resetBack" class="btn-ghost">Zpět</button>
+      </div>
+      <div class="small" style="margin-top:8px">Systém simuluje odeslání emailu — obnovovací kód se zobrazí lokálně (z bezpečnostních důvodů).</div>
+    </div>
+  </div>
+
+  <!-- MAIN app -->
+  <div id="mainContent" class="hidden">
+    <div class="card" style="display:flex;justify-content:space-between;align-items:center">
+      <div style="display:flex;gap:12px;align-items:center">
+        <img id="avatarImg" src="" alt="avatar" style="width:56px;height:56px;border-radius:10px;object-fit:cover;display:none"/>
+        <div>
+          <div id="welcomeText" style="font-weight:800"></div>
+          <div id="roleInfo" class="small"></div>
+        </div>
+      </div>
+      <div class="top-actions">
+        <button id="createBtn" class="btn-ghost">Vytvořit</button>
+        <button id="homeBtn" class="btn-ghost">Domů</button>
+        <button id="logoutBtn" class="btn-ghost">Odhlásit se</button>
+      </div>
+    </div>
+
+    <div id="homePanel" class="card">
+      <h3>Oznámení</h3>
+      <div id="announcementsList"></div>
+    </div>
+
+    <div id="studentPanel" class="card hidden">
+      <h3>Testy a hry pro tebe</h3>
+      <div id="availableList"></div>
+      <div id="testArea" class="hidden"></div>
+    </div>
+
+    <div id="teacherPanel" class="card hidden">
+      <h3>Správa: Vytvořené položky</h3>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+        <button id="newTestBtn">Přidat test</button>
+        <button id="newGameBtn" class="btn-ghost">Přidat hru</button>
+        <button id="newPollBtn" class="btn-ghost">Přidat anketu</button>
+        <button id="newAnnBtn" class="btn-ghost">Odeslat oznámení</button>
+      </div>
+      <div id="teacherItems"></div>
+    </div>
+
+    <div id="createPanel" class="card hidden">
+      <h3>Vytvořit položku</h3>
+      <div class="container-padding">
+        <label>Název</label><input id="item_title" />
+        <label>Typ</label>
+        <select id="item_type"><option value="test">Test</option><option value="hra">Hra</option><option value="anketa">Anketa</option><option value="oznameni">Oznámení</option></select>
+
+        <div id="dynamicCreate" style="margin-top:12px"></div>
+
+        <label style="margin-top:8px">Cílová třída (nepovinné)</label>
+        <input id="item_target_class" placeholder="např. 6.A" />
+        <label style="margin-top:8px">Vybraní žáci (vyber z registrovaných)</label>
+        <select id="item_targets" multiple style="height:120px"></select>
+
+        <div style="margin-top:10px;display:flex;gap:8px">
+          <button id="saveItemBtn">Uložit</button>
+          <button id="cancelCreateBtn" class="btn-ghost">Zrušit</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="resultsPanel" class="card hidden">
+      <h3>Výsledky studentů</h3>
+      <div id="resultsList"></div>
+    </div>
+
+    <div id="messagesPanel" class="card hidden">
+      <h3>Zprávy</h3>
+      <div style="display:flex;gap:12px;flex-wrap:wrap">
+        <div style="flex:1;min-width:240px">
+          <label>Komu</label>
+          <select id="msgRecipients"></select>
+          <label style="margin-top:8px">Text (max 100 znaků)</label>
+          <textarea id="msgText" rows="3" maxlength="100"></textarea>
+          <div style="margin-top:8px;display:flex;gap:8px"><button id="sendMsgBtn">Odeslat</button><button id="refreshMsgBtn" class="btn-ghost">Načíst</button></div>
+        </div>
+        <div style="flex:2;min-width:300px">
+          <label>Konverzace</label>
+          <div id="msgList" style="max-height:320px;overflow:auto;padding:8px;border-radius:8px;border:1px solid #e6f3fa"></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="managePanel" class="card hidden">
+      <h3>Správa uživatelů (admin)</h3>
+      <div style="margin-bottom:12px">
+        <button id="refreshUsers" class="btn-ghost">Aktualizovat</button>
+        <button id="exportData" class="btn-ghost">Exportovat data (JSON)</button>
+      </div>
+      <div id="usersList"></div>
+    </div>
+
+    <div id="settingsPanel" class="card hidden">
+      <h3>Nastavení účtu</h3>
+      <div class="container-padding">
+        <div class="two"><input id="set_name" placeholder="Jméno"/><input id="set_surname" placeholder="Příjmení"/></div>
+        <input id="set_class" placeholder="Třída"/>
+        <label style="margin-top:8px">Změnit heslo</label>
+        <input id="set_new_password" type="password" placeholder="Nové heslo"/>
+        <div style="margin-top:8px;display:flex;gap:8px"><button id="saveSettings">Uložit</button><button id="cancelSettings" class="btn-ghost">Zrušit</button></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- menu modal (tři tečky) -->
+  <div id="menuModal" class="menu-modal hidden">
+    <div style="display:flex;justify-content:space-between;align-items:center"><strong>Menu</strong><button id="closeMenu" class="btn-ghost">Zavřít</button></div>
+    <div id="menuItems" style="margin-top:10px"></div>
+  </div>
+
+</main>
+
+<script>
+// ---------- Data / localStorage ----------
+let users = JSON.parse(localStorage.getItem('users') || '[]');
+let items = JSON.parse(localStorage.getItem('items') || '[]'); // items: {id, type, title, from, targets[], target_class, questions, text, poll_options, created}
+let answers = JSON.parse(localStorage.getItem('answers') || '[]'); // saved test results
+let messages = JSON.parse(localStorage.getItem('messages') || '[]'); // messages
+
+// helper: save all
+function saveAll(){
+  localStorage.setItem('users', JSON.stringify(users));
+  localStorage.setItem('items', JSON.stringify(items));
+  localStorage.setItem('answers', JSON.stringify(answers));
+  localStorage.setItem('messages', JSON.stringify(messages));
+}
+
+// ensure demo admin exists
+(function ensureAdmin(){
+  const adminEmail = 'admin@skola.cz';
+  if (!users.some(u=>u.email===adminEmail)){
+    users.push({ id: Date.now() + '-admin', email: adminEmail, password: 'Admin12345', name:'Admin', surname:'Admin', role:'ucitel', class:'', isAdmin:true, avatar_url:'', avatar_approved:true });
+    saveAll();
+  }
+})();
+
+// ---------- UI refs ----------
+const roleSelect = document.getElementById('roleSelect');
+const authSection = document.getElementById('authSection');
+const resetSection = document.getElementById('resetSection');
+const mainContent = document.getElementById('mainContent');
+const menuDot = document.getElementById('menuDot');
+const menuModal = document.getElementById('menuModal');
+const menuItems = document.getElementById('menuItems');
+
+let currentRole = null; // 'ucitel' or 'zak'
+let currentUser = null;
+
+// ---------- device & theme ----------
+function detectDevice(){ const isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent) || innerWidth < 720; document.getElementById('deviceBadge').innerText = isMobile ? 'Mobil' : 'Počítač'; }
+detectDevice(); window.addEventListener('resize', detectDevice);
+
+const themeToggle = document.getElementById('themeToggle');
+themeToggle.addEventListener('click', ()=>{
+  document.body.classList.toggle('dark');
+  themeToggle.textContent = document.body.classList.contains('dark') ? '☀️' : '🌙';
+});
+
+// ---------- role selection ----------
+document.getElementById('btnUcitel').addEventListener('click', ()=> chooseRole('ucitel'));
+document.getElementById('btnZak').addEventListener('click', ()=> chooseRole('zak'));
+
+function chooseRole(role){
+  currentRole = role;
+  roleSelect.classList.add('hidden');
+  authSection.classList.remove('hidden');
+  document.getElementById('authMsg').innerText = '';
+  document.getElementById('authTitle').innerText = role === 'ucitel' ? 'Přihlášení (učitel)' : 'Přihlášení / Registrace (žák)';
+  // register toggle: only for students
+  document.getElementById('toggleAuth').style.display = role === 'zak' ? 'inline-block' : 'none';
+  showLoginMode();
+}
+
+document.getElementById('backToRole').addEventListener('click', ()=>{
+  currentRole = null;
+  authSection.classList.add('hidden');
+  roleSelect.classList.remove('hidden');
+});
+
+// ---------- auth (login/register) ----------
+let isRegisterMode = false;
+function showLoginMode(){ isRegisterMode = false; document.getElementById('regFields').classList.add('hidden'); document.getElementById('toggleAuth').innerText = 'Nemám účet'; document.getElementById('authSubmit').innerText = 'Přihlásit se'; }
+function showRegisterMode(){ isRegisterMode = true; document.getElementById('regFields').classList.remove('hidden'); document.getElementById('toggleAuth').innerText = 'Mám účet'; document.getElementById('authSubmit').innerText = 'Registrovat se'; }
+
+document.getElementById('toggleAuth').addEventListener('click', ()=> {
+  if (currentRole !== 'zak') return;
+  isRegisterMode = !isRegisterMode;
+  isRegisterMode ? showRegisterMode() : showLoginMode();
+});
+
+document.getElementById('authSubmit').addEventListener('click', async ()=>{
+  const email = document.getElementById('email').value.trim().toLowerCase();
+  const pwd = document.getElementById('password').value;
+  if (!email || !pwd) return alert('Vyplň email i heslo.');
+  if (isRegisterMode && currentRole === 'zak'){
+    // register student
+    const name = document.getElementById('reg_name').value.trim();
+    const surname = document.getElementById('reg_surname').value.trim();
+    const cls = document.getElementById('reg_class').value.trim();
+    const pw = document.getElementById('reg_password').value;
+    if (!name || !surname || !cls || !pw) return alert('Vyplň jméno, příjmení, třídu a heslo.');
+    if (users.some(u=>u.email===email)) return alert('Uživatel s tímto emailem už existuje.');
+    // avatar (optional)
+    let avatarUrl = '';
+    const f = document.getElementById('reg_avatar').files[0];
+    if (f){
+      // store as data URL (lokálně)
+      avatarUrl = await fileToDataURL(f);
+    }
+    const newUser = { id: Date.now() + '-' + Math.random().toString(36).slice(2,6), email, password: pw, name, surname, role:'zak', class:cls, isAdmin:false, avatar_url:avatarUrl, avatar_approved:false };
+    users.push(newUser); saveAll();
+    alert('Registrace proběhla. Nyní se přihlaste.');
+    showLoginMode();
+    return;
+  } else {
+    // login
+    const user = users.find(u => u.email === email && u.password === pwd);
+    if (!user) return alert('Špatné přihlašovací údaje.');
+    if (user.role !== currentRole && !(user.isAdmin && currentRole==='ucitel')) return alert(`Tento účet není registrován jako ${currentRole}.`);
+    currentUser = user;
+    enterApp();
+  }
+});
+
+// forgotten password (simulation)
+document.getElementById('forgotBtn').addEventListener('click', ()=>{
+  authSection.classList.add('hidden'); resetSection.classList.remove('hidden');
+});
+document.getElementById('resetBack').addEventListener('click', ()=>{
+  resetSection.classList.add('hidden'); authSection.classList.remove('hidden');
+});
+document.getElementById('resetSend').addEventListener('click', ()=>{
+  const email = document.getElementById('reset_email').value.trim().toLowerCase();
+  if (!email) return alert('Zadej email.');
+  const user = users.find(u=>u.email===email);
+  // Simulace: vygenerujeme token a uložíme do localStorage, a "pošleme" ho (alert/console)
+  const token = Math.random().toString(36).slice(2,9).toUpperCase();
+  const expires = Date.now() + 60*60*1000; // 1h
+  const resetTokens = JSON.parse(localStorage.getItem('resetTokens') || '[]');
+  resetTokens.push({ email, token, expires });
+  localStorage.setItem('resetTokens', JSON.stringify(resetTokens));
+  alert(`Simulace: obnova hesla — posíláme kód na ${email}\n(Dal jsem ti kód sem kvůli testování): ${token}`);
+  // user can now use token to reset: simple prompt
+  const code = prompt('Zadej obdržený kód (nebo zrušit):');
+  if (code){
+    const found = resetTokens.find(r => r.email===email && r.token===code && r.expires > Date.now());
+    if (found){
+      const newPass = prompt('Zadej nové heslo:');
+      if (newPass){
+        const u = users.find(x=>x.email===email);
+        if (u){ u.password = newPass; saveAll(); alert('Heslo změněno.'); resetSection.classList.add('hidden'); authSection.classList.remove('hidden'); return; }
+      } else alert('Nepovinné heslo nebylo zadáno.');
+    } else alert('Kód neplatný nebo vypršel.');
+  }
+});
+
+// ---------- helper file to dataURL ----------
+function fileToDataURL(file){
+  return new Promise((res, rej)=>{
+    const fr = new FileReader();
+    fr.onload = ()=> res(fr.result);
+    fr.onerror = e=> rej(e);
+    fr.readAsDataURL(file);
+  });
+}
+
+// ---------- enter app ----------
+function enterApp(){
+  authSection.classList.add('hidden');
+  resetSection.classList.add('hidden');
+  mainContent.classList.remove('hidden');
+  document.getElementById('menuDot').classList.remove('hidden');
+  // hide roleSelect permanently
+  roleSelect.classList.add('hidden');
+  // welcome
+  document.getElementById('welcomeText').innerText = `${currentUser.name || ''} ${currentUser.surname || ''}`.trim();
+  document.getElementById('roleInfo').innerText = `${currentUser.role}${currentUser.class ? ' • ' + currentUser.class : ''}${currentUser.isAdmin ? ' • admin' : ''}`;
+  // avatar
+  if (currentUser.avatar_url && currentUser.avatar_approved){ const av = document.getElementById('avatarImg'); av.src = currentUser.avatar_url; av.style.display='block'; } else { document.getElementById('avatarImg').style.display='none'; }
+  // panels
+  document.getElementById('homePanel').classList.remove('hidden');
+  if (currentUser.role === 'ucitel' || currentUser.isAdmin){
+    document.getElementById('teacherPanel').classList.remove('hidden');
+    document.getElementById('studentPanel').classList.add('hidden');
+  } else {
+    document.getElementById('studentPanel').classList.remove('hidden');
+    document.getElementById('teacherPanel').classList.add('hidden');
+  }
+  // show menu items appropriate
+  buildMenu();
+  refreshAll();
+}
+
+// logout
+document.getElementById('logoutBtn').addEventListener('click', logout);
+function logout(){
+  currentUser = null;
+  mainContent.classList.add('hidden');
+  roleSelect.classList.remove('hidden');
+  document.getElementById('menuDot').classList.add('hidden');
+  document.getElementById('menuModal').classList.add('hidden');
+  // clear login inputs
+  document.getElementById('email').value=''; document.getElementById('password').value='';
+}
+
+// ---------- menu (three dots) ----------
+menuDot.addEventListener('click', ()=>{
+  menuModal.classList.toggle('hidden');
+});
+
+document.getElementById('closeMenu').addEventListener('click', ()=> menuModal.classList.add('hidden'));
+
+function buildMenu(){
+  menuItems.innerHTML = '';
+  function addItem(text, fn){
+    const d = document.createElement('div'); d.className='menuItem'; d.innerText = text; d.onclick = ()=>{ menuModal.classList.add('hidden'); fn(); };
+    menuItems.appendChild(d);
+  }
+  addItem('Domů', ()=> { showPanel('home'); });
+  addItem('Vytvořit', ()=> { showPanel('create'); });
+  if (currentUser.role === 'ucitel' || currentUser.isAdmin) addItem('Výsledky', ()=> showPanel('results'));
+  if (currentUser.role === 'zak') addItem('Testy', ()=> showPanel('student'));
+  if (currentUser.role === 'zak') addItem('Hry', ()=> showPanel('student'));
+  addItem('Zprávy', ()=> showPanel('messages'));
+  if (currentUser.isAdmin) addItem('Správa uživatelů', ()=> showPanel('manage'));
+  addItem('Nastavení', ()=> showPanel('settings'));
+  addItem('Odhlásit se', ()=> logout());
+}
+
+// ---------- navigation panels ----------
+function showPanel(name){
+  // panels: home, student, teacher, create, results, messages, manage, settings
+  document.getElementById('homePanel').style.display = 'none';
+  document.getElementById('studentPanel').style.display = 'none';
+  document.getElementById('teacherPanel').style.display = 'none';
+  document.getElementById('createPanel').style.display = 'none';
+  document.getElementById('resultsPanel').style.display = 'none';
+  document.getElementById('messagesPanel').style.display = 'none';
+  document.getElementById('managePanel').style.display = 'none';
+  document.getElementById('settingsPanel').style.display = 'none';
+  if (name === 'home') document.getElementById('homePanel').style.display = 'block';
+  if (name === 'student') document.getElementById('studentPanel').style.display = 'block';
+  if (name === 'teacher') document.getElementById('teacherPanel').style.display = 'block';
+  if (name === 'create') document.getElementById('createPanel').style.display = 'block';
+  if (name === 'results') document.getElementById('resultsPanel').style.display = 'block';
+  if (name === 'messages') document.getElementById('messagesPanel').style.display = 'block';
+  if (name === 'manage') document.getElementById('managePanel').style.display = 'block';
+  if (name === 'settings') document.getElementById('settingsPanel').style.display = 'block';
+  refreshAll();
+}
+
+document.getElementById('homeBtn').addEventListener('click', ()=> showPanel('home'));
+document.getElementById('createBtn').addEventListener('click', ()=> showPanel('create'));
+document.getElementById('createBtn').addEventListener('click', ()=> { document.getElementById('item_title').value=''; });
+
+// ---------- create item UI ----------
+document.getElementById('item_type').addEventListener('change', updateCreateDynamic);
+document.getElementById('newTestBtn').addEventListener('click', ()=> { document.getElementById('item_type').value='test'; updateCreateDynamic(); showPanel('create'); });
+document.getElementById('newGameBtn').addEventListener('click', ()=> { document.getElementById('item_type').value='hra'; updateCreateDynamic(); showPanel('create'); });
+document.getElementById('newPollBtn').addEventListener('click', ()=> { document.getElementById('item_type').value='anketa'; updateCreateDynamic(); showPanel('create'); });
+document.getElementById('newAnnBtn').addEventListener('click', ()=> { document.getElementById('item_type').value='oznameni'; updateCreateDynamic(); showPanel('create'); });
+
+function updateCreateDynamic(){
+  const type = document.getElementById('item_type').value;
+  const d = document.getElementById('dynamicCreate');
+  d.innerHTML = '';
+  if (type === 'oznameni'){
+    d.innerHTML = `<label>Text oznámení</label><textarea id="create_text" rows="4"></textarea>`;
+  } else if (type === 'anketa'){
+    d.innerHTML = `<label>Možnosti (každá na nový řádek)</label><textarea id="create_poll_options" rows="4"></textarea>`;
+  } else {
+    // test/hra: questions
+    d.innerHTML = `<div id="questions_container"></div><div style="margin-top:8px"><button id="addQuestionBtn" class="btn-ghost">Přidat otázku</button></div>`;
+    setTimeout(()=> document.getElementById('addQuestionBtn').addEventListener('click', addQuestionBlock), 0);
+    addQuestionBlock();
+  }
+  // fill targets select with students
+  populateTargetsSelect();
+}
+
+// question block generator
+function addQuestionBlock(){
+  const cont = document.getElementById('questions_container');
+  const idx = cont.children.length + 1;
+  const div = document.createElement('div'); div.className='question-block';
+  div.innerHTML = `
+    <label>Otázka ${idx}</label>
+    <input class="q_text" placeholder="Text otázky"/>
+    <div class="two">
+      <input class="q_a" placeholder="a)"/>
+      <input class="q_b" placeholder="b)"/>
+    </div>
+    <input class="q_c" placeholder="c)"/>
+    <label>Správná (1=a,2=b,3=c)</label>
+    <input class="q_correct" placeholder="1" />
+    <div style="margin-top:8px"><button class="removeQ btn-ghost">Smazat otázku</button></div>
+  `;
+  cont.appendChild(div);
+  div.querySelector('.removeQ').addEventListener('click', ()=> div.remove());
+}
+
+// populate targets select
+function populateTargetsSelect(){
+  const sel = document.getElementById('item_targets');
+  sel.innerHTML = '';
+  const students = users.filter(u => u.role === 'zak');
+  if (students.length === 0) { sel.innerHTML = '<option disabled>Žádní registrovaní žáci</option>'; return; }
+  students.forEach(s => {
+    const o = document.createElement('option'); o.value = s.email; o.text = `${s.name} ${s.surname} — ${s.class} — ${s.email}`; sel.appendChild(o);
+  });
+}
+
+// save item
+document.getElementById('saveItemBtn').addEventListener('click', ()=>{
+  if (!(currentUser && (currentUser.role === 'ucitel' || currentUser.isAdmin))) return alert('Nemáš právo vytvářet položky.');
+  const title = document.getElementById('item_title').value.trim();
+  const type = document.getElementById('item_type').value;
+  const target_class = document.getElementById('item_target_class').value.trim();
+  const targets = Array.from(document.getElementById('item_targets').selectedOptions).map(o=>o.value);
+  if (!title) return alert('Zadej název.');
+  const it = { id: Date.now() + '-' + Math.random().toString(36).slice(2,6), type, title, from: currentUser.email, targets, target_class, created: new Date().toISOString() };
+  if (type === 'oznameni'){
+    it.text = document.getElementById('create_text').value.trim();
+    if (!it.text) return alert('Napiš text oznámení.');
+  } else if (type === 'anketa'){
+    const opts = document.getElementById('create_poll_options').value.split('\n').map(s=>s.trim()).filter(Boolean);
+    if (opts.length < 2) return alert('Anketa potřebuje minimálně 2 možnosti.');
+    it.poll_options = opts;
+  } else {
+    // test/hra
+    const cont = document.getElementById('questions_container');
+    const qnodes = cont ? Array.from(cont.children) : [];
+    if (qnodes.length === 0) return alert('Přidej alespoň jednu otázku.');
+    it.questions = qnodes.map(n=>{
+      const txt = n.querySelector('.q_text').value.trim();
+      const a = n.querySelector('.q_a').value.trim();
+      const b = n.querySelector('.q_b').value.trim();
+      const c = n.querySelector('.q_c').value.trim();
+      const corr = parseInt(n.querySelector('.q_correct').value,10) - 1;
+      if (!txt || !a || !b || !c) throw('Vyplň všechny otázky a odpovědi.');
+      if (isNaN(corr) || corr < 0 || corr > 2) throw('Špatná správná odpověď.');
+      return { text: txt, options: [a,b,c], correct: corr };
+    });
+  }
+  items.push(it); saveAll();
+  alert('Položka uložena.');
+  showPanel('teacher');
+  refreshAll();
+});
+
+// cancel create
+document.getElementById('cancelCreateBtn').addEventListener('click', ()=> showPanel('home'));
+
+// ---------- refresh data displays ----------
+function refreshAll(){
+  refreshAnnouncements();
+  refreshTeacherItems();
+  refreshAvailableForStudent();
+  refreshResults();
+  populateMessagesUI();
+  if (currentUser && currentUser.isAdmin) refreshUsersList();
+}
+
+function refreshAnnouncements(){
+  const list = document.getElementById('announcementsList'); list.innerHTML = '';
+  const anns = items.filter(i=> i.type === 'oznameni').sort((a,b)=> new Date(b.created) - new Date(a.created));
+  if (anns.length === 0) list.innerHTML = '<div class="small">Žádná oznámení.</div>';
+  anns.forEach(a=>{
+    const d = document.createElement('div'); d.className='listItem';
+    d.innerHTML = `<strong>${sanitize(a.title)}</strong><div class="small">od ${sanitize(a.from)} • ${new Date(a.created).toLocaleString()}</div><div style="margin-top:6px">${sanitize(a.text)}</div>`;
+    list.appendChild(d);
+  });
+}
+
+function refreshTeacherItems(){
+  const list = document.getElementById('teacherItems'); list.innerHTML = '';
+  if (!currentUser) return;
+  const mine = items.filter(i => i.from === currentUser.email);
+  if (mine.length === 0) { list.innerHTML = '<div class="small">Nemáš nic vytvořeno.</div>'; return; }
+  mine.forEach(i=>{
+    const d = document.createElement('div'); d.className='listItem';
+    d.innerHTML = `<strong>${sanitize(i.title)}</strong> <div class="small">${i.type} • ${new Date(i.created).toLocaleString()}</div>
+      <div style="margin-top:8px"><button class="btn-ghost" onclick="editItem('${i.id}')">Upravit</button> <button class="btn-ghost" onclick="deleteItem('${i.id}')">Smazat</button></div>`;
+    list.appendChild(d);
+  });
+}
+
+function refreshAvailableForStudent(){
+  const list = document.getElementById('availableList'); list.innerHTML = '';
+  if (!currentUser || currentUser.role !== 'zak') { list.innerHTML = '<div class="small">Přihlaš se jako žák, aby ses mohl účastnit testů a her.</div>'; return; }
+  const myEmail = currentUser.email; const myClass = currentUser.class;
+  const available = items.filter(i => (i.type === 'test' || i.type === 'hra') && ( (!i.targets || i.targets.length===0) || i.targets.includes(myEmail) || (i.target_class && i.target_class === myClass) ));
+  if (available.length === 0) list.innerHTML = '<div class="small">Žádné testy/hry pro tebe.</div>';
+  available.forEach(i=>{
+    const d = document.createElement('div'); d.className='listItem';
+    d.innerHTML = `<strong>${sanitize(i.title)}</strong><div class="small">${i.type} • od ${sanitize(i.from)}</div><div style="margin-top:8px"><button onclick="startItem('${i.id}')">Spustit</button></div>`;
+    list.appendChild(d);
+  });
+}
+
+// edit/delete item
+window.editItem = function(id){
+  const it = items.find(x=>x.id===id);
+  if (!it) return alert('Položka nenalezena.');
+  if (it.from !== currentUser.email && !currentUser.isAdmin) return alert('Nemáš právo upravovat.');
+  // populate create form
+  showPanel('create');
+  document.getElementById('item_title').value = it.title;
+  document.getElementById('item_type').value = it.type;
+  document.getElementById('item_target_class').value = it.target_class || '';
+  updateCreateDynamic();
+  setTimeout(()=>{
+    // targets
+    const sel = document.getElementById('item_targets');
+    Array.from(sel.options).forEach(o=> o.selected = it.targets && it.targets.includes(o.value));
+    if (it.type === 'oznameni') document.getElementById('create_text').value = it.text || '';
+    if (it.type === 'anketa') document.getElementById('create_poll_options').value = (it.poll_options || []).join('\n');
+    if (it.type === 'test' || it.type === 'hra'){
+      const cont = document.getElementById('questions_container'); cont.innerHTML = '';
+      it.questions.forEach(q=>{
+        addQuestionBlock();
+        const n = cont.lastElementChild;
+        n.querySelector('.q_text').value = q.text;
+        n.querySelector('.q_a').value = q.options[0];
+        n.querySelector('.q_b').value = q.options[1];
+        n.querySelector('.q_c').value = q.options[2];
+        n.querySelector('.q_correct').value = (q.correct + 1);
+      });
+    }
+    // on save: replace existing
+    document.getElementById('saveItemBtn').onclick = function replaceSave(){
+      try {
+        const title = document.getElementById('item_title').value.trim();
+        const type = document.getElementById('item_type').value;
+        const target_class = document.getElementById('item_target_class').value.trim();
+        const targets = Array.from(document.getElementById('item_targets').selectedOptions).map(o=>o.value);
+        if (!title) return alert('Zadej název.');
+        it.title = title; it.type = type; it.target_class = target_class; it.targets = targets;
+        if (type === 'oznameni'){ it.text = document.getElementById('create_text').value.trim(); }
+        else if (type === 'anketa'){ it.poll_options = document.getElementById('create_poll_options').value.split('\n').map(s=>s.trim()).filter(Boolean); }
+        else {
+          const cont = document.getElementById('questions_container');
+          const qnodes = Array.from(cont.children);
+          it.questions = qnodes.map(n=>{
+            const txt = n.querySelector('.q_text').value.trim();
+            const a = n.querySelector('.q_a').value.trim();
+            const b = n.querySelector('.q_b').value.trim();
+            const c = n.querySelector('.q_c').value.trim();
+            const corr = parseInt(n.querySelector('.q_correct').value,10) - 1;
+            if (!txt||!a||!b||!c) throw('Vyplň všechny otázky a odpovědi.');
+            if (isNaN(corr) || corr < 0 || corr > 2) throw('Špatná správná odpověď.');
+            return { text: txt, options:[a,b,c], correct: corr };
+          });
+        }
+        saveAll();
+        alert('Upraveno.');
+        // restore save button handler
+        document.getElementById('saveItemBtn').onclick = saveNewItemHandler;
+        showPanel('teacher');
+        refreshAll();
+      } catch(e){ alert(e); }
+    };
+  }, 100);
+};
+
+window.deleteItem = function(id){
+  if (!confirm('Opravdu smazat tuto položku?')) return;
+  items = items.filter(i=>i.id!==id);
+  saveAll(); refreshAll();
+};
+
+// default save handler (used after edit replaces it)
+function saveNewItemHandler(){
+  // uses same logic as earlier
+}
+saveNewItemHandler = function(){ document.getElementById('saveItemBtn').click(); }; // placeholder; real handler defined earlier
+
+// we need to set the standard save handler (initially)
+(function setStandardSave(){
+  // already defined above by event listener; ensure it's assigned
+  // (we added an event listener earlier, so nothing to do)
+})();
+
+// ---------- playing items (tests / games) ----------
+let currentRunningItem = null;
+let currentQuestionIndex = 0;
+let studentAnswers = [];
+
+window.startItem = function(id){
+  const it = items.find(x=>x.id===id);
+  if (!it) return alert('Položka nenalezena.');
+  currentRunningItem = it;
+  currentQuestionIndex = 0; studentAnswers = [];
+  showTestArea();
+};
+
+function showTestArea(){
+  const area = document.getElementById('testArea'); area.classList.remove('hidden'); area.innerHTML = '';
+  if (!currentRunningItem) return;
+  if (!currentRunningItem.questions || currentQuestionIndex >= currentRunningItem.questions.length){
+    // finish
+    let correct=0; const total = (currentRunningItem.questions || []).length;
+    studentAnswers.forEach(a=>{ if (currentRunningItem.questions[a.index].correct === a.answer) correct++; });
+    alert(`Hotovo! Správně ${correct}/${total}`);
+    answers.push({ id: Date.now()+'-'+Math.random().toString(36).slice(2,6), itemId: currentRunningItem.id, user: currentUser.email, answers: studentAnswers, score: correct, total, date: new Date().toISOString() });
+    saveAll();
+    area.classList.add('hidden');
+    currentRunningItem = null;
+    refreshAll();
+    return;
+  }
+  const q = currentRunningItem.questions[currentQuestionIndex];
+  const div = document.createElement('div'); div.className='question-block';
+  div.innerHTML = `<p><strong>Otázka ${currentQuestionIndex+1}:</strong> ${sanitize(q.text)}</p>
+    ${q.options.map((o,i)=>`<label style="display:block"><input type="radio" name="ans" value="${i}"> ${sanitize(o)}</label>`).join('')}
+    <div style="margin-top:8px"><button id="submitAns">Odeslat odpověď</button></div>`;
+  area.innerHTML = ''; area.appendChild(div);
+  document.getElementById('submitAns').addEventListener('click', ()=>{
+    const r = document.querySelector('input[name="ans"]:checked');
+    if (!r) return alert('Vyber odpověď.');
+    const ans = parseInt(r.value,10);
+    studentAnswers.push({ index: currentQuestionIndex, answer: ans });
+    currentQuestionIndex++;
+    showTestArea();
+  });
+}
+
+// ---------- results for teachers ----------
+function refreshResults(){
+  const list = document.getElementById('resultsList'); list.innerHTML = '';
+  if (!currentUser || (currentUser.role !== 'ucitel' && !currentUser.isAdmin)) { list.innerHTML = '<div class="small">Pouze pro učitele.</div>'; return; }
+  // items created by this teacher
+  const myItems = items.filter(i=>i.from === currentUser.email).map(i=>i.id);
+  const rs = answers.filter(a => myItems.includes(a.itemId));
+  if (rs.length === 0) list.innerHTML = '<div class="small">Žádné odeslané odpovědi.</div>';
+  rs.forEach(r=>{
+    const d = document.createElement('div'); d.className='listItem';
+    d.innerHTML = `<strong>${sanitize(r.user)}</strong> • ${sanitize(r.date)} <div class="small">Skóre: ${r.score}/${r.total}</div>`;
+    list.appendChild(d);
+  });
+}
+
+// ---------- messages ----------
+function populateMessagesUI(){
+  const sel = document.getElementById('msgRecipients'); sel.innerHTML = '';
+  const others = users.filter(u => u.email !== currentUser.email);
+  others.forEach(o => { const opt = document.createElement('option'); opt.value = o.email; opt.text = `${o.name} ${o.surname} — ${o.email}`; sel.appendChild(opt); });
+}
+
+document.getElementById('sendMsgBtn').addEventListener('click', ()=>{
+  const to = document.getElementById('msgRecipients').value;
+  const text = document.getElementById('msgText').value.trim().slice(0,100);
+  if (!to || !text) return alert('Vyplň příjemce a text.');
+  messages.push({ id: Date.now()+'-'+Math.random().toString(36).slice(2,6), from: currentUser.email, to, text, date: new Date().toISOString() });
+  saveAll();
+  document.getElementById('msgText').value = '';
+  loadMessages();
+});
+document.getElementById('refreshMsgBtn').addEventListener('click', loadMessages);
+
+function loadMessages(){
+  const list = document.getElementById('msgList'); list.innerHTML = '';
+  if (!currentUser) return;
+  const conv = messages.filter(m => m.from === currentUser.email || m.to === currentUser.email).sort((a,b)=> new Date(a.date) - new Date(b.date));
+  if (conv.length === 0) { list.innerHTML = '<div class="small">Žádné zprávy.</div>'; return; }
+  conv.forEach(m=>{
+    const d = document.createElement('div'); d.style.marginBottom='8px';
+    d.className='listItem';
+    d.innerHTML = `<div class="small">${m.from} → ${m.to} • ${new Date(m.date).toLocaleString()}</div><div style="margin-top:6px">${sanitize(m.text)}</div>`;
+    list.appendChild(d);
+  });
+}
+
+// ---------- users management (admin) ----------
+function refreshUsersList(){
+  const list = document.getElementById('usersList'); list.innerHTML = '';
+  users.forEach(u=>{
+    const d = document.createElement('div'); d.className='listItem';
+    d.innerHTML = `<strong>${sanitize(u.name)} ${sanitize(u.surname)}</strong> <div class="small">${sanitize(u.email)} • ${sanitize(u.role)} • ${sanitize(u.class || '')} ${u.isAdmin ? '• admin' : ''}</div>
+      <div style="margin-top:8px">${u.avatar_url ? `<img src="${u.avatar_url}" style="width:56px;height:56px;border-radius:8px;object-fit:cover;margin-right:8px">` : ''}<button class="btn-ghost" onclick="approveAvatar('${u.id}')">Schválit avatar</button></div>`;
+    list.appendChild(d);
+  });
+}
+
+window.approveAvatar = function(id){
+  const u = users.find(x=>x.id===id); if (!u) return;
+  u.avatar_approved = true; saveAll(); alert('Profilová fotka schválena.'); refreshUsersList();
+}
+
+document.getElementById('refreshUsers').addEventListener('click', refreshUsersList);
+document.getElementById('exportData').addEventListener('click', ()=>{
+  const blob = new Blob([JSON.stringify({ users, items, answers, messages }, null, 2)], { type:'application/json' });
+  const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'export.json'; a.click();
+});
+
+// ---------- settings ----------
+document.getElementById('saveSettings').addEventListener('click', ()=>{
+  const n = document.getElementById('set_name').value.trim();
+  const s = document.getElementById('set_surname').value.trim();
+  const c = document.getElementById('set_class').value.trim();
+  const newPass = document.getElementById('set_new_password').value;
+  if (!n || !s) return alert('Jméno a příjmení jsou povinné.');
+  currentUser.name = n; currentUser.surname = s; currentUser.class = c;
+  if (newPass) currentUser.password = newPass;
+  // update in users list
+  const idx = users.findIndex(u => u.email === currentUser.email);
+  if (idx >= 0) users[idx] = currentUser;
+  saveAll(); alert('Uloženo'); showPanel('home'); refreshAll();
+});
+document.getElementById('cancelSettings').addEventListener('click', ()=> showPanel('home'));
+
+// ---------- helpers ----------
+function sanitize(s){ if (!s && s!==0) return ''; return String(s).replaceAll('<','&lt;').replaceAll('>','&gt;'); }
+
+// ---------- initial refreshers and UI wiring ----------
+function refreshAllInitial(){
+  // setup event listeners for create save button (standard new item create)
+  document.getElementById('saveItemBtn').addEventListener('click', ()=> {
+    // We'll call the earlier save logic by triggering click on it (already wired)
+  });
+
+  // standard save handler (we implemented earlier in saveItemBtn event)
+  // populate targets select on load
+  populateTargetsSelect();
+}
+
+refreshAllInitial();
+
+// on load: keep roleSelect visible
+// if you want to auto-login a demo user for testing, you can uncomment:
+(function tryAutoLogin(){
+  // no auto login by default
+})();
+
+// ---------- final refresh function to call after actions ----------
+function refreshAll(){
+  refreshAnnouncements();
+  if (currentUser){
+    refreshTeacherItems();
+    refreshAvailableForStudent();
+    refreshResults();
+    populateMessagesUI();
+    loadMessages();
+    if (currentUser.isAdmin) refreshUsersList();
+    // prefill settings
+    document.getElementById('set_name').value = currentUser.name || '';
+    document.getElementById('set_surname').value = currentUser.surname || '';
+    document.getElementById('set_class').value = currentUser.class || '';
+  }
+}
+
+// expose some functions to global (already assigned)
+window.refreshAll = refreshAll;
+
+// ---------- small utilities for user convenience ----------
+document.addEventListener('keydown', (e)=>{
+  if (e.key === 'Escape'){ menuModal.classList.add('hidden'); }
+});
+
+</script>
+</body>
+</html>
